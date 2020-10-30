@@ -1,15 +1,22 @@
 <template>
   <div id="app">
 
-		<a-row class="header" type="flex" justify="space-around" align="middle">
+		<a-row class="header" type="flex" justify="space-around" align="middle" style="margin-bottom: 5px">
 			<a-col>
 				<a-icon class="icon" type="plus" @click="openmodal('add')"/>
 				<a-modal :visible="modal.add.visible" @cancel="closemodal('add')">
-
+					<span slot="percent" slot-scope="text">{{text}}%</span>
+					<span slot="price" slot-scope="text">{{text}}р.</span>
 				</a-modal>
 			</a-col>
 			<a-col>
-				<a-icon class="icon" type="setting" />
+				<a-icon class="icon" type="setting" @click="openmodal('settings')"/>
+				<a-modal :visible="modal.settings.visible" @cancel="closemodal('settings')">
+					<p>
+						test
+						<a-input v-model="onScreen" type="number" min=1></a-input>
+					</p>
+				</a-modal>
 			</a-col>
 			<a-col>
 				<a-pagination v-model="page" :total="beerData.length" :pageSize="onScreen" @change="onPageChange"/>
@@ -49,6 +56,7 @@ const columns = [
 	{
 		title: 'percent',
 		dataIndex: 'percent',
+    scopedSlots: { customRender: 'percent' },
 	},
 	{
 		title: 'country',
@@ -65,6 +73,7 @@ const columns = [
 	{
 		title: 'price',
 		dataIndex: 'price',
+    scopedSlots: { customRender: 'price' },
 	},
 ]
 
@@ -73,11 +82,11 @@ const beerData = []
 for(let i = 0; i < 50; i++){
 	beerData.push({
 		id: i,
-		name: "Пиво",
+		name: "Пиво мощнейшее #" + i ,
 		percent: "2.4",
 		country: "чх",
-		brightness: "anus",
-		type: "jopa",
+		brightness: "светлое",
+		type: "нефильтрованное",
 		price: "2.2"
 	})
 }
@@ -89,12 +98,15 @@ export default {
 			columns,
 			beerData,
 			page: 1,
-			onScreen: 15,
+			onScreen: 14,
 			interval: 0,
 			modal: {
 				add: {
 					visible: false
-				}
+				},
+				settings: {
+					visible: false
+				},
 			}
 		}
 	},
@@ -182,6 +194,7 @@ body{
 	border: none;
 	font-size: 36px;
 	color: #fff;
+	cursor: pointer;
 }
 .header{
 	color: #fff;
