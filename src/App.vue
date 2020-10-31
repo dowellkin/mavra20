@@ -4,13 +4,12 @@
 		<a-row class="header" type="flex" justify="space-around" align="middle" style="margin-bottom: 5px">
 			<a-col>
 				<a-icon class="icon" type="plus" @click="openmodal('add')"/>
-				<a-modal :visible="modal.add.visible" @cancel="closemodal('add')" @ok='addSubmit()'>
+				<a-modal :visible="modal.add.visible" @cancel="closemodal('add')" @ok='addSubmit()' :title="modal.add.currentid == -1 ? 'Добавить позицию':'Изменить позицию'">
 					<div slot="footer">
 						<a-button type="danger" v-if="modal.add.currentid != -1" @click="deleteLine()">Удалить</a-button>
 						<a-button @click="closemodal('add')">Отмена</a-button>
 						<a-button @click='addSubmit()' type="primary">Ок</a-button>
 					</div>
-					<h2>Добавить позицию</h2>
 					<p>
 						Название пива
 						<a-input v-model="modal.add.info.name"></a-input>
@@ -71,19 +70,19 @@
 			</a-col>
 			<a-col>
 				<a-icon class="icon" type="setting" @click="openmodal('settings')"/>
-				<a-modal :visible="modal.settings.visible" @cancel="closemodal('settings')">
+				<a-modal :visible="modal.settings.visible" @cancel="closemodal('settings')" :footer="false" title="Настройки">
 					<p>
 						Максимальное количество строк на экране
 						<a-input v-model="onScreen" type="number" min=1></a-input>
 					</p>
 					<p>
 						<a-popconfirm
-							title="Это заменит все существующие записи?"
+							title="Это заменит все существующие записи на записи из файла book.csv?"
 							ok-text="Да"
 							cancel-text="Нет"
 							@confirm="fetchFromFile"
 						>
-							<a-button>Загрузить из файла</a-button>
+							<a-button :loading='loadFromFileLoading'>Загрузить из файла</a-button>
 						</a-popconfirm>
 					</p>
 					<a-popconfirm
@@ -165,6 +164,7 @@ export default {
 	name: 'App',
 	data(){
 		return {
+			loadFromFileLoading: false,
 			columns,
 			page: 1,
 			onScreen: 14,
@@ -321,22 +321,38 @@ export default {
       this.prefix = prefix;
 		},
 		fetchFromFile(){
+			this.loadFromFileLoading = true;
 			fetch('./beer.csv')
 			.then(res => res.text())
 			.then(res => {
-				const lines = res.split("\r\n").filter(el => el.length > 0);
+				let noNameTrigger = false;
+				const lines = res.split("\r\n").filter(el => {
+					if(el[0] == ";"){
+						noNameTrigger = true;
+					}
+					return el.length > 0 && el[0] != ";"
+				});
+				if(noNameTrigger)
+					this.$message.warning('Одно или более полей не имеет имени и не будет отображено');
+				console.log(lines);
+				console.log(lines[8]);
 				const result = [];
 				lines.forEach(line => {
 					let name, percent, country, brightness, type, price;
 					[name, percent, country, brightness, type, price] = line.split(";");
 					price = parseFloat(price.replace(",", ".")).toFixed(1)
 					percent = parseFloat(percent.replace(",", ".")).toFixed(1)
-					const beer = {name, percent, country, brightness, type, price};
+					const beer = {id: result.length ,name, percent, country, brightness, type, price};
 					result.push(beer);
 				});
-				console.log(lines);
-				console.log(result);
 				this.setBeer(result);
+				this.$message.success("Позиции успешно загружены из файла")
+				this.loadFromFileLoading = false;
+			})
+			.catch(err => {
+				console.error(err);
+				this.$message.error("Возникла какая-то ошибка")
+				this.loadFromFileLoading = false;
 			})
 		}
 	},
