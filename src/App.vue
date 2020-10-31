@@ -14,6 +14,16 @@
 					<p>
 						Название пива
 						<a-input v-model="modal.add.info.name"></a-input>
+						<!-- <a-mentions
+							placeholder=""
+							:prefix="''"
+							v-model="modal.add.info.name"
+							@search="onSearch"
+						>
+							<a-mentions-option v-for="value in getNames || []" :key="value" :value="value">
+								{{ value }}
+							</a-mentions-option>
+						</a-mentions> -->
 					</p>
 					<p>
 						Страна производства
@@ -63,9 +73,27 @@
 				<a-icon class="icon" type="setting" @click="openmodal('settings')"/>
 				<a-modal :visible="modal.settings.visible" @cancel="closemodal('settings')">
 					<p>
-						Количество строк на экране
+						Максимальное количество строк на экране
 						<a-input v-model="onScreen" type="number" min=1></a-input>
 					</p>
+					<p>
+						<a-popconfirm
+							title="Это заменит все существующие записи?"
+							ok-text="Да"
+							cancel-text="Нет"
+							@confirm="fetchFromFile"
+						>
+							<a-button>Загрузить из файла</a-button>
+						</a-popconfirm>
+					</p>
+					<a-popconfirm
+						title="Очистить весь список?"
+						ok-text="Да"
+						cancel-text="Нет"
+						@confirm="clearBeer"
+					>
+						<a-button type="danger" icon="delete">Очистить</a-button>
+					</a-popconfirm>
 				</a-modal>
 			</a-col>
 			<a-col v-if="getBeer.length > onScreen">
@@ -76,8 +104,8 @@
 		<a-config-provider>
 			<template #renderEmpty>
         <div style="text-align: center; cursor: pointer" @click="openmodal('add')">
-          <a-icon type="smile" style="font-size: 20px" />
-          <p>Добавтье продукт с помощью "+" в левом верхнем углу экрана</p>
+          <a-icon type="smile" style="font-size: 28px; margin-bottom: 15px" />
+          <p style="font-size: 20px">Добавтье продукт с помощью "+" в левом верхнем углу экрана</p>
         </div>
       </template>
 			<a-table
@@ -101,7 +129,7 @@
 </template>
 
 <script>
-import {mapGetters, mapMutations, mapActions} from 'vuex';
+import {mapGetters, mapActions} from 'vuex';
 
 const columns = [
 	{
@@ -172,12 +200,11 @@ export default {
 				return false
 			}
 		},
-		...mapGetters(['getBeer', 'getBrightness', 'getType'])
+		...mapGetters(['getBeer', 'getBrightness', 'getType', 'getNames'])
 	},
   methods: {
-		...mapMutations(['addBeer', 'removeById']),
 		...mapGetters(['getId']),
-		...mapActions(['updateBeerField']),
+		...mapActions(['updateBeerField', 'deleteBeerField', 'addBeer', 'clearBeer', 'addCountries', 'addName', 'setBeer']),
     onPageChange(pagination) {
 			if(pagination.current == undefined){
 				this.page = pagination
@@ -243,7 +270,8 @@ export default {
 				this.$message.error('Добавьте название');
 				return;
 			}
-			
+			// this.$store.dispatch('addName', inf.name);
+			// this.$store.dispatch('addCountries', inf.country);
 			let result = {
 				id: this.getId(),
 				name: inf.name,
@@ -283,16 +311,40 @@ export default {
 			this.modal.add.visible = false;
 		},
 		deleteLine(){
-			this.removeById(this.modal.add.currentid);
+			this.deleteBeerField(this.modal.add.currentid);
 			this.$message.success('Позиция удалена успешно');
 			this.clearAddFields();
 			this.modal.add.visible = false;
+		},
+		onSearch(_, prefix) {
+      console.log(_, prefix);
+      this.prefix = prefix;
+		},
+		fetchFromFile(){
+			fetch('./beer.csv')
+			.then(res => res.text())
+			.then(res => {
+				const lines = res.split("\r\n").filter(el => el.length > 0);
+				const result = [];
+				lines.forEach(line => {
+					let name, percent, country, brightness, type, price;
+					[name, percent, country, brightness, type, price] = line.split(";");
+					price = parseFloat(price.replace(",", ".")).toFixed(1)
+					percent = parseFloat(percent.replace(",", ".")).toFixed(1)
+					const beer = {name, percent, country, brightness, type, price};
+					result.push(beer);
+				});
+				console.log(lines);
+				console.log(result);
+				this.setBeer(result);
+			})
 		}
 	},
 	mounted(){
 		this.interval = setInterval(() => {
 			this.nextPage();
 		}, 25000);
+		this.$store.dispatch('load');
 	}
 }
 </script>
@@ -339,17 +391,22 @@ body{
 }
 .header{
 	color: #fff;
-	opacity: .2;
-	transition: opacity .2s ease;
+	/* opacity: .2; */
+	/* transition: opacity .2s ease; */
 }
-.header:hover{
+/* .header:hover{
 	opacity: 1;
-}
+} */
 
 .header .icon{
 	font-size: 1.7rem;
+	opacity: .2;
+	transition: opacity .2s ease;
 }
 
+.header .icon:hover{
+	opacity: 1;
+}
 
 .header .ant-pagination-item a {
 	color: #fff
