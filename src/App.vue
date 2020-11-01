@@ -101,14 +101,21 @@
 						</a-row>
 					</p>
 					<p>
-						<a-popconfirm
-							title="Это заменит все существующие записи на записи из файла book.csv?"
-							ok-text="Да"
-							cancel-text="Нет"
-							@confirm="fetchFromFile"
-						>
-							<a-button :loading='loadFromFileLoading'>Загрузить из файла</a-button>
-						</a-popconfirm>
+						<a-row type="flex">
+							<a-col flex=1>
+								<a-input type='file' @change="fileload"></a-input>
+							</a-col>
+							<a-col>
+								<a-popconfirm
+									:title="`Это заменит все существующие записи на записи из ${file == ''? 'файла book.csv' : 'выбранного файла'}?`"
+									ok-text="Да"
+									cancel-text="Нет"
+									@confirm="fetchFromFile"
+								>
+									<a-button :loading='loadFromFileLoading'>Загрузить из файла</a-button>
+								</a-popconfirm>
+							</a-col>
+						</a-row>
 					</p>
 					<a-popconfirm
 						title="Очистить весь список?"
@@ -190,6 +197,7 @@ export default {
 	name: 'App',
 	data(){
 		return {
+			file: '',
 			loadFromFileLoading: false,
 			columns,
 			page: 1,
@@ -350,11 +358,26 @@ export default {
 		},
 		fetchFromFile(){
 			this.loadFromFileLoading = true;
+			console.log(this.file);
+			if(this.file != ''){
+				this.parseTextIntoLines(this.file)
+				this.file = '';
+				return
+			}
 			fetch('./beer.csv')
 			.then(res => res.text())
 			.then(res => {
+				this.parseTextIntoLines(res);
+			})
+			.catch(err => {
+				console.error(err);
+				this.$message.error("Возникла какая-то ошибка")
+				this.loadFromFileLoading = false;
+			})
+		},
+		parseTextIntoLines(res){
 				let noNameTrigger = false;
-				const lines = res.split("\r\n").filter(el => {
+				const lines = res.split(/\r*\n/).filter(el => {
 					if(el[0] == ";"){
 						noNameTrigger = true;
 					}
@@ -376,12 +399,7 @@ export default {
 				this.setBeer(result);
 				this.$message.success("Позиции успешно загружены из файла")
 				this.loadFromFileLoading = false;
-			})
-			.catch(err => {
-				console.error(err);
-				this.$message.error("Возникла какая-то ошибка")
-				this.loadFromFileLoading = false;
-			})
+
 		},
 		onscreenChange(e){
 			console.log(e);
@@ -390,6 +408,21 @@ export default {
 		paddingChange(e){
 			console.log(e);
 			this.$store.dispatch('updatePadding', this.modal.settings.padding)
+		},
+		fileload(e){
+			const file = e.target.files[0];
+			const reader = new FileReader();
+			const app = this;
+			reader.readAsText(file);
+			reader.onload = function() {
+				app.file = reader.result;
+				app.$message.success("Файл загружен успешно")
+			};
+			reader.onerror = function() {
+				console.log(reader.error);
+				app.$message.error("Не удаллось загрузить файл")
+			};
+
 		}
 	},
 	mounted(){
