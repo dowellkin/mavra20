@@ -1,5 +1,7 @@
 <template>
-  <div id="app">
+  <div id="app" style="background: linear-gradient( rgba(0, 0, 0, 0.62), rgba(0, 0, 0, 0.62) ), url('./img/bg.jpg');
+    background-size: cover;
+    background-position: 50% 50%;">
 
 		<a-row class="header" type="flex" justify="space-around" align="middle" style="margin-bottom: 5px">
 			<a-col>
@@ -78,6 +80,26 @@
 						Стоимость
 						<a-input v-model="modal.add.info.price"></a-input>
 					</p>
+					<div v-if="modal.add.currentid == -1">
+						<p>
+							Загрузка из файла
+							<a-row type="flex">
+								<a-col flex=1>
+									<a-input type='file' @change="templateLoad"></a-input>
+								</a-col>
+								<a-col>
+									<a-button :loading='templateLoading' @click="loadFromTemplate">Загрузить из файла</a-button>
+								</a-col>
+							</a-row>
+						</p>
+						<div v-if="getTemplates.length > 0" style="max-height: 170px; border: 1px solid #d9d9d9; border-radius: 5px; overflow: auto">
+							<ul style="list-style: none; margin: 0; padding: 0 0 0 20px">
+								<li v-for="(template, index) in getTemplates" :key="template.name" style="cursor: pointer" @click="acceptTemplate(index)">
+									{{template.name}}
+								</li>
+							</ul>
+						</div>
+					</div>
 				</a-modal>
 			</a-col>
 			<a-col>
@@ -198,7 +220,9 @@ export default {
 	data(){
 		return {
 			file: '',
+			fileTemplate: '',
 			loadFromFileLoading: false,
+			templateLoading: false,
 			columns,
 			page: 1,
 			interval: 0,
@@ -236,11 +260,11 @@ export default {
 				return false
 			}
 		},
-		...mapGetters(['getBeer', 'getBrightness', 'getType', 'getNames', 'getCountries', 'getSettings'])
+		...mapGetters(['getBeer', 'getBrightness', 'getType', 'getNames', 'getCountries', 'getSettings', 'getTemplates'])
 	},
   methods: {
 		...mapGetters(['getId']),
-		...mapActions(['updateBeerField', 'deleteBeerField', 'addBeer', 'clearBeer', 'addCountries', 'addName', 'setBeer']),
+		...mapActions(['updateBeerField', 'deleteBeerField', 'addBeer', 'clearBeer', 'addCountries', 'addName', 'setBeer', 'updateTemplates']),
     onPageChange(pagination) {
 			if(pagination.current == undefined){
 				this.page = pagination
@@ -291,6 +315,7 @@ export default {
 				name: "",
 				percent: "",
 				country: "",
+				countrySwitch: 'ввести',
 				brightness: "",
 				brightnessSwitch: "пусто",
 				type: "",
@@ -360,14 +385,21 @@ export default {
 			this.loadFromFileLoading = true;
 			console.log(this.file);
 			if(this.file != ''){
-				this.parseTextIntoLines(this.file)
+				const lines = this.parseTextIntoLines(this.file)
 				this.file = '';
+				
+				this.setBeer(lines);
+				this.$message.success("Позиции успешно загружены из файла")
+				this.loadFromFileLoading = false;
 				return
 			}
 			fetch('./beer.csv')
 			.then(res => res.text())
 			.then(res => {
-				this.parseTextIntoLines(res);
+				const lines = this.parseTextIntoLines(res);
+				this.setBeer(lines);
+				this.$message.success("Позиции успешно загружены из файла")
+				this.loadFromFileLoading = false;
 			})
 			.catch(err => {
 				console.error(err);
@@ -396,9 +428,7 @@ export default {
 					const beer = {id: result.length ,name, percent, country, brightness, type, price};
 					result.push(beer);
 				});
-				this.setBeer(result);
-				this.$message.success("Позиции успешно загружены из файла")
-				this.loadFromFileLoading = false;
+				return result;
 
 		},
 		onscreenChange(e){
@@ -422,7 +452,61 @@ export default {
 				console.log(reader.error);
 				app.$message.error("Не удаллось загрузить файл")
 			};
-
+		},
+		templateLoad(e){
+			const file = e.target.files[0];
+			const reader = new FileReader();
+			const app = this;
+			reader.readAsText(file);
+			reader.onload = function() {
+				app.fileTemplate = reader.result;
+				app.$message.success("Файл загружен успешно")
+			};
+			reader.onerror = function() {
+				console.log(reader.error);
+				app.$message.error("Не удаллось загрузить файл")
+			};
+		},
+		loadFromTemplate(){
+			this.templateLoading = true;
+			console.log(this.fileTemplate);
+			if(this.fileTemplate != ''){
+				const lines = this.parseTextIntoLines(this.fileTemplate)
+				this.fileTemplate = '';
+				
+				this.updateTemplates(lines);
+				this.$message.success("Позиции успешно загружены из файла")
+				this.templateLoading = false;
+				return
+			}
+			fetch('./regular.csv')
+			.then(res => res.text())
+			.then(res => {
+				const lines = this.parseTextIntoLines(res);
+				this.updateTemplates(lines);
+				this.$message.success("Позиции успешно загружены из файла")
+				this.templateLoading = false;
+			})
+			.catch(err => {
+				console.error(err);
+				this.$message.error("Возникла какая-то ошибка")
+				this.loadFromFileLoading = false;
+			})
+			
+		},
+		acceptTemplate(index){
+			const line = this.getTemplates[index];
+			this.modal.add.info = {
+				name: line.name,
+				percent: line.percent,
+				country: line.country,
+				countrySwitch: "ввести",
+				brightness: line.brightness,
+				brightnessSwitch: "ввести",
+				type: line.type,
+				typeSwitch: "ввести",
+				price: line.price,
+			}
 		}
 	},
 	mounted(){
@@ -452,7 +536,6 @@ body{
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-align: center;
-	background: linear-gradient( rgba(0, 0, 0, 0.62), rgba(0, 0, 0, 0.62) ), url('/img/bg.jpg');
 	background-size: cover;
 	background-position: 50% 50%;
 	padding: 5px;

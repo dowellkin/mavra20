@@ -13,7 +13,8 @@ export default new Vuex.Store({
 		settings: {
 			onScreen: 14,
 			padding: 'medium'
-		}
+		},
+		templates: []
   },
   mutations: {
 		addBeer(state, data){
@@ -59,6 +60,9 @@ export default new Vuex.Store({
 		},
 		setPadding(state, value){
 			state.settings.padding = value;
+		},
+		setTemplates(state, value){
+			state.templates = value;
 		}
   },
   actions: {
@@ -160,6 +164,9 @@ export default new Vuex.Store({
 		updatePadding(ctx, val){
 			ctx.commit('setPadding', val);
 			ctx.dispatch('saveOnly', 'settings')
+		},
+		updateTemplates(ctx, val){
+			ctx.commit('setTemplates', val)
 		}
 	},
 	getters: {
@@ -184,6 +191,9 @@ export default new Vuex.Store({
 		},
 		getSettings(state){
 			return state.settings
+		},
+		getTemplates(state){
+			return state.templates
 		}
 	},
   modules: {
