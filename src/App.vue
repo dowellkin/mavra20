@@ -26,7 +26,19 @@
 					</p>
 					<p>
 						Страна производства
-						<a-input v-model="modal.add.info.country"></a-input>
+						<!-- <a-input v-model="modal.add.info.country"></a-input> -->
+						<a-row type="flex">
+							<a-col flex=1>
+								<a-select class="modalSelect" v-model="modal.add.info.countrySwitch">
+									<a-select-option v-for="country in getCountries" :key="country" :value="country">
+										{{country}}
+									</a-select-option>
+								</a-select>
+							</a-col>
+							<a-col flex=3 v-if="modal.add.info.countrySwitch == 'ввести'">
+								<a-input v-model="modal.add.info.country"></a-input>
+							</a-col>
+						</a-row>
 					</p>
 					<p>
 						Крепость
@@ -73,7 +85,20 @@
 				<a-modal :visible="modal.settings.visible" @cancel="closemodal('settings')" :footer="false" title="Настройки">
 					<p>
 						Максимальное количество строк на экране
-						<a-input v-model="onScreen" type="number" min=1></a-input>
+						<a-input v-model="modal.settings.onScreen" type="number" min=1 @change="onscreenChange"></a-input>
+					</p>
+					<p>
+						Интервал
+						<a-row type='flex'>
+							<a-col flex=1>
+								<a-select v-model="modal.settings.padding" style="width: 100%" @change="paddingChange">
+									<a-select-option value="small">Маленький</a-select-option>
+									<a-select-option value="medium">Средний</a-select-option>
+									<a-select-option value="huge">Большой</a-select-option>
+								</a-select>
+
+							</a-col>
+						</a-row>
 					</p>
 					<p>
 						<a-popconfirm
@@ -95,8 +120,8 @@
 					</a-popconfirm>
 				</a-modal>
 			</a-col>
-			<a-col v-if="getBeer.length > onScreen">
-				<a-pagination v-model="page" :total="getBeer.length" :pageSize="onScreen" @change="onPageChange"/>
+			<a-col v-if="getBeer.length > getSettings.onScreen">
+				<a-pagination v-model="page" :total="getBeer.length" :pageSize="getSettings.onScreen" @change="onPageChange"/>
 			</a-col>
 		</a-row>
 
@@ -109,6 +134,7 @@
       </template>
 			<a-table
 				class="mainTable"
+				:class="[ `padding-${getSettings.padding}`  ]"
 				:columns="columns"
 				:data-source="getBeer"
 				size="large"
@@ -167,7 +193,6 @@ export default {
 			loadFromFileLoading: false,
 			columns,
 			page: 1,
-			onScreen: 14,
 			interval: 0,
 			modal: {
 				add: {
@@ -176,6 +201,7 @@ export default {
 						name: "",
 						percent: "",
 						country: "",
+						countrySwitch: "ввести",
 						brightness: "",
 						brightnessSwitch: "пусто",
 						type: "",
@@ -185,7 +211,9 @@ export default {
 					currentid: -1,
 				},
 				settings: {
-					visible: false
+					visible: false,
+					onScreen: 14,
+					padding: 'medium'
 				},
 			}
 		}
@@ -194,13 +222,13 @@ export default {
 	},
 	computed:{
 		pag(){
-			if(this.getBeer.length > this.onScreen){
-				return { pageSize: this.onScreen, position: 'top', current: this.page }
+			if(this.getBeer.length > this.getSettings.onScreen){
+				return { pageSize: this.getSettings.onScreen, position: 'top', current: this.page }
 			} else {
 				return false
 			}
 		},
-		...mapGetters(['getBeer', 'getBrightness', 'getType', 'getNames'])
+		...mapGetters(['getBeer', 'getBrightness', 'getType', 'getNames', 'getCountries', 'getSettings'])
 	},
   methods: {
 		...mapGetters(['getId']),
@@ -218,7 +246,7 @@ export default {
 			}, 25000);
 		},
 		nextPage(){
-			const pages = Math.ceil(this.getBeer.length / this.onScreen)
+			const pages = Math.ceil(this.getBeer.length / this.getSettings.onScreen)
 			if(this.page < pages){
 				this.page += 1;
 			} else {
@@ -354,6 +382,14 @@ export default {
 				this.$message.error("Возникла какая-то ошибка")
 				this.loadFromFileLoading = false;
 			})
+		},
+		onscreenChange(e){
+			console.log(e);
+			this.$store.dispatch('updateOnScreen', this.modal.settings.onScreen)
+		},
+		paddingChange(e){
+			console.log(e);
+			this.$store.dispatch('updatePadding', this.modal.settings.padding)
 		}
 	},
 	mounted(){
@@ -361,6 +397,8 @@ export default {
 			this.nextPage();
 		}, 25000);
 		this.$store.dispatch('load');
+		this.modal.settings.onScreen = this.getSettings.onScreen
+		this.modal.settings.padding = this.getSettings.padding
 	}
 }
 </script>
@@ -373,6 +411,7 @@ html, body{
 }
 body{
 	overflow: hidden;
+	font-weight: 600;
 }
 #app {
 	height: 100%;
@@ -398,9 +437,10 @@ body{
 	/* background-color: red; */
 }
 .mainTable .ant-table-tbody > tr > td {
-	padding: 5px;
+	padding-left: 5px;
+	padding-right: 5px;
 	border: none;
-	font-size: 36px;
+	font-size: 38px;
 	color: #fff;
 	cursor: pointer;
 	user-select: none;
@@ -444,5 +484,20 @@ body{
 
 .modalSelect{
 	width: 100%;
+}
+
+.mainTable.padding-small .ant-table-tbody > tr > td{
+	padding-top: 0;
+	padding-bottom: 0;
+}
+
+.mainTable.padding-medium .ant-table-tbody > tr > td{
+	padding-top: 5px;
+	padding-bottom: 5px;
+}
+
+.mainTable.padding-huge .ant-table-tbody > tr > td{
+	padding-top: 17px;
+	padding-bottom: 17px;
 }
 </style>

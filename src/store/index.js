@@ -9,7 +9,11 @@ export default new Vuex.Store({
 		brightness: ['пусто', 'светлое', 'темное', 'ввести'],
 		type: ['пусто', 'паст.фил.', 'паст.нефил.', 'непаст.фил.', 'непаст.нефил.', 'ввести'],
 		names: [],
-		countries: []
+		countries: ['РБ', 'РФ', 'Чех', 'ЛТ', 'Герм', 'ввести'],
+		settings: {
+			onScreen: 14,
+			padding: 'medium'
+		}
   },
   mutations: {
 		addBeer(state, data){
@@ -47,6 +51,15 @@ export default new Vuex.Store({
 		clearCountries(state){
 			state.countries = [];
 		},
+		setSettings(state, value){
+			state.settings = value;
+		},
+		setOnScreen(state, value){
+			state.settings.onScreen = parseInt(value);
+		},
+		setPadding(state, value){
+			state.settings.padding = value;
+		}
   },
   actions: {
 		updateBeerField(ctx, value){
@@ -118,6 +131,9 @@ export default new Vuex.Store({
 			if(localStorage.getItem('names')){
 				ctx.commit('setNames',					JSON.parse(localStorage.getItem('names')));
 			}
+			if(localStorage.getItem('settings')){
+				ctx.commit('setSettings',					JSON.parse(localStorage.getItem('settings')));
+			}
 		},
 		updateBrightness(ctx, value){
 			ctx.commit('setBrightness', value);
@@ -136,6 +152,14 @@ export default new Vuex.Store({
 			} else if(value.toLowerCase() == 'countries'){
 				ctx.commit('clearCountries')
 			}
+		},
+		updateOnScreen(ctx, val){
+			ctx.commit('setOnScreen', val);
+			ctx.dispatch('saveOnly', 'settings')
+		},
+		updatePadding(ctx, val){
+			ctx.commit('setPadding', val);
+			ctx.dispatch('saveOnly', 'settings')
 		}
 	},
 	getters: {
@@ -157,6 +181,9 @@ export default new Vuex.Store({
 		},
 		getCountries(state){
 			return state.countries;
+		},
+		getSettings(state){
+			return state.settings
 		}
 	},
   modules: {
