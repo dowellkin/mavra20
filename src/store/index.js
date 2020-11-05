@@ -8,11 +8,30 @@ export default new Vuex.Store({
 		beer: [],
 		brightness: ['пусто', 'светлое', 'темное', 'ввести'],
 		type: ['пусто', 'паст.фил.', 'паст.нефил.', 'непаст.фил.', 'непаст.нефил.', 'ввести'],
+		sortRules: [
+			{
+				name: 'brightness',
+				values: [
+					'светлое',
+					'темное',
+				]
+			},
+			{
+				name: 'type',
+				values: [
+					'непаст.нефил.',
+					'непаст.фил.',
+					'паст.нефил.',
+					'паст.фил.'
+				]
+			}
+		],
 		names: [],
 		countries: ['РБ', 'РФ', 'Чех', 'ЛТ', 'Герм', 'ввести'],
 		settings: {
 			onScreen: 14,
-			padding: 'medium'
+			padding: 'medium',
+			sort: true
 		},
 		templates: []
   },
@@ -60,6 +79,9 @@ export default new Vuex.Store({
 		},
 		setPadding(state, value){
 			state.settings.padding = value;
+		},
+		setSort(state, value){
+			state.settings.sort = value;
 		},
 		setTemplates(state, value){
 			state.templates = value;
@@ -133,10 +155,10 @@ export default new Vuex.Store({
 				ctx.commit('setType',					JSON.parse(localStorage.getItem('type')));
 			}
 			if(localStorage.getItem('names')){
-				ctx.commit('setNames',					JSON.parse(localStorage.getItem('names')));
+				ctx.commit('setNames',				JSON.parse(localStorage.getItem('names')));
 			}
 			if(localStorage.getItem('settings')){
-				ctx.commit('setSettings',					JSON.parse(localStorage.getItem('settings')));
+				ctx.commit('setSettings',			JSON.parse(localStorage.getItem('settings')));
 			}
 		},
 		updateBrightness(ctx, value){
@@ -165,13 +187,34 @@ export default new Vuex.Store({
 			ctx.commit('setPadding', val);
 			ctx.dispatch('saveOnly', 'settings')
 		},
+		updateSort(ctx, value){
+			ctx.commit('setSort', value);
+			ctx.dispatch('saveOnly', 'settings');
+		},
 		updateTemplates(ctx, val){
 			ctx.commit('setTemplates', val)
 		}
 	},
 	getters: {
 		getBeer(state){
-			return state.beer
+			if(!state.settings.sort){
+				console.log('no');
+				return state.beer
+			}
+			else{
+				console.log("yes");
+				return state.beer.sort( (a,b) => {
+					for (const rule of state.sortRules) {
+						let aW = rule.values.indexOf(a[rule.name]) == -1? Infinity: rule.values.indexOf(a[rule.name]);
+						let bW = rule.values.indexOf(b[rule.name]) == -1? Infinity: rule.values.indexOf(b[rule.name]);
+						if(aW != bW)
+							return aW - bW
+					}
+					if(a.firstname < b.firstname) { return -1; }
+					if(a.firstname > b.firstname) { return 1; }
+					return 0;
+				})
+			}
 		},
 		getBrightness(state){
 			return state.brightness

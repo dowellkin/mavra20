@@ -139,6 +139,15 @@
 							</a-col>
 						</a-row>
 					</p>
+					
+					<p>
+						<a-row>
+							<a-col>
+								<a-checkbox v-model="modal.settings.sort" @click="sortChange">Сортировка</a-checkbox>
+							</a-col>
+						</a-row>
+					</p>
+
 					<a-popconfirm
 						title="Очистить весь список?"
 						ok-text="Да"
@@ -245,7 +254,8 @@ export default {
 				settings: {
 					visible: false,
 					onScreen: 14,
-					padding: 'medium'
+					padding: 'medium',
+					sort: true
 				},
 			}
 		}
@@ -507,6 +517,9 @@ export default {
 				typeSwitch: "ввести",
 				price: line.price,
 			}
+		},
+		sortChange(){
+			this.$store.dispatch('updateSort', !this.modal.settings.sort)
 		}
 	},
 	mounted(){
