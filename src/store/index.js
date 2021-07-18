@@ -31,6 +31,7 @@ export default new Vuex.Store({
 		settings: {
 			onScreen: 14,
 			padding: 'medium',
+			paddingNumber: 5,
 			sort: true
 		},
 		templates: []
@@ -198,11 +199,9 @@ export default new Vuex.Store({
 	getters: {
 		getBeer(state){
 			if(!state.settings.sort){
-				console.log('no');
 				return state.beer
 			}
 			else{
-				console.log("yes");
 				return state.beer.sort( (a,b) => {
 					for (const rule of state.sortRules) {
 						let aW = rule.values.indexOf(a[rule.name]) == -1? Infinity: rule.values.indexOf(a[rule.name]);

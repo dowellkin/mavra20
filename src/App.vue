@@ -31,7 +31,7 @@
 						<!-- <a-input v-model="modal.add.info.country"></a-input> -->
 						<a-row type="flex">
 							<a-col flex=1>
-								<a-select class="modalSelect" v-model="modal.add.info.countrySwitch">
+								<a-select class="modalSelect" v-model="modal.add.info.country">
 									<a-select-option v-for="country in getCountries" :key="country" :value="country">
 										{{country}}
 									</a-select-option>
@@ -110,30 +110,32 @@
 						<a-input v-model="modal.settings.onScreen" type="number" min=1 @change="onscreenChange"></a-input>
 					</p>
 					<p>
-						Интервал
+						Интервал между строками таблицы: {{modal.settings.paddingNumber}}
 						<a-row type='flex'>
 							<a-col flex=1>
-								<a-select v-model="modal.settings.padding" style="width: 100%" @change="paddingChange">
-									<a-select-option value="small">Маленький</a-select-option>
-									<a-select-option value="medium">Средний</a-select-option>
-									<a-select-option value="huge">Большой</a-select-option>
-								</a-select>
-
+								<a-slider :default-value="5" :min="0" :max="40" v-model="modal.settings.paddingNumber" @change="sliderChange"/>
 							</a-col>
 						</a-row>
 					</p>
 					<p>
 						<a-row type="flex">
 							<a-col flex=1>
-								<a-input type='file' @change="fileload"></a-input>
+								<a-input type='file' @change="fileload" ref="fileLoadingInput"></a-input>
 							</a-col>
 							<a-col>
 								<a-popconfirm
-									:title="`Это заменит все существующие записи на записи из ${file == ''? 'файла book.csv' : 'выбранного файла'}?`"
 									ok-text="Да"
 									cancel-text="Нет"
 									@confirm="fetchFromFile"
 								>
+									<div slot="title">
+										<span v-if="file == ''">
+											Вы не выбрали файл. Вы уверены что хотите заменить <br> все существующие записи на записи из файлы book.csv?
+										</span>
+										<span v-else>
+											Это заменит все существующие записи на записи из выбранного файла?
+										</span>
+									</div>
 									<a-button :loading='loadFromFileLoading'>Загрузить из файла</a-button>
 								</a-popconfirm>
 							</a-col>
@@ -172,7 +174,7 @@
       </template>
 			<a-table
 				class="mainTable"
-				:class="[ `padding-${getSettings.padding}`  ]"
+				:style="{'--childpadding': modal.settings.paddingNumber + 'px'}"
 				:columns="columns"
 				:data-source="getBeer"
 				size="large"
@@ -255,6 +257,7 @@ export default {
 					visible: false,
 					onScreen: 14,
 					padding: 'medium',
+					paddingNumber: 5,
 					sort: true
 				},
 			}
@@ -401,6 +404,7 @@ export default {
 				this.setBeer(lines);
 				this.$message.success("Позиции успешно загружены из файла")
 				this.loadFromFileLoading = false;
+				this.$refs.fileLoadingInput.value = '';
 				return
 			}
 			fetch('./beer.csv')
@@ -452,29 +456,29 @@ export default {
 		fileload(e){
 			const file = e.target.files[0];
 			const reader = new FileReader();
-			const app = this;
+			const self = this;
 			reader.readAsText(file);
 			reader.onload = function() {
-				app.file = reader.result;
-				app.$message.success("Файл загружен успешно")
+				self.file = reader.result;
+				self.$message.success("Файл загружен успешно")
 			};
 			reader.onerror = function() {
 				console.log(reader.error);
-				app.$message.error("Не удаллось загрузить файл")
+				self.$message.error("Не удаллось загрузить файл")
 			};
 		},
 		templateLoad(e){
 			const file = e.target.files[0];
 			const reader = new FileReader();
-			const app = this;
+			const self = this;
 			reader.readAsText(file);
 			reader.onload = function() {
-				app.fileTemplate = reader.result;
-				app.$message.success("Файл загружен успешно")
+				self.fileTemplate = reader.result;
+				self.$message.success("Файл загружен успешно")
 			};
 			reader.onerror = function() {
 				console.log(reader.error);
-				app.$message.error("Не удаллось загрузить файл")
+				self.$message.error("Не удаллось загрузить файл")
 			};
 		},
 		loadFromTemplate(){
@@ -520,6 +524,11 @@ export default {
 		},
 		sortChange(){
 			this.$store.dispatch('updateSort', !this.modal.settings.sort)
+		},
+		sliderChange(){
+			const result = Object.assign({}, this.getSettings, {paddingNumber: this.modal.settings.paddingNumber});
+			this.$store.commit('setSettings', result)
+			this.$store.dispatch('saveOnly', "settings")
 		}
 	},
 	mounted(){
@@ -529,6 +538,7 @@ export default {
 		this.$store.dispatch('load');
 		this.modal.settings.onScreen = this.getSettings.onScreen
 		this.modal.settings.padding = this.getSettings.padding
+		this.modal.settings.paddingNumber = this.getSettings.paddingNumber
 	}
 }
 </script>
@@ -628,5 +638,10 @@ body{
 .mainTable.padding-huge .ant-table-tbody > tr > td{
 	padding-top: 17px;
 	padding-bottom: 17px;
+}
+
+.mainTable .ant-table-tbody > tr > td{
+	padding-top: var(--childpadding);
+	padding-bottom: var(--childpadding);
 }
 </style>
